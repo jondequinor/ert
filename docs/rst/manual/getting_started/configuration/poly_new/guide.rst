@@ -38,7 +38,7 @@ On the main screen you will see some elements. The ones we care about in this Gu
 
 Run an empty experiment
 ***********************
-To run an empty experiment, select "Ensamble experiment" as the Simulation mode. Then press the "Start simulation" button. You get a dialog asking if you want to start with the "default" case. That is fine, so press "Yes". The experiment will run, but since we have configured no forward model, only an empty experiment is executed.
+To run an empty experiment, select "Ensamble Experiment" as the Simulation mode. Then press the "Start Simulation" button. You get a dialog asking if you want to start with the "default" case. That is fine, so press "Yes". The experiment will run, but since we have configured no forward model, only an empty experiment is executed.
 
 A new window will appear called "Simulations". Here you can see the status of the running of the experiment. If you press "Details", you can see status of each running realization.
 
