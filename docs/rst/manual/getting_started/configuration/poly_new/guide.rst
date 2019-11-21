@@ -1,6 +1,6 @@
 Creating a config
 =================
-ERT runs a set of simulations with prior set of parameters sampled from distributions. The results of the simulations are then given to an optimization algorithm which uses a set of observations to tune the parameters in order to make a next run of the simulations produce results that fit better with the set of observations.
+ERT runs a set of simulations with prior set of parameters sampled from distributions. The results of the simulations are then given to an optimization algorithm. The algorithm then uses a set of observations to tune the parameters. Using the updated parameters for the next run of the simulations will give results that fit better with the set of observations.
 
 To understand the basics of how to configure and use ERT, we will walk through how to set up a project that uses a polynomial evaluation as the forward model.
 
