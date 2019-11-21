@@ -1,6 +1,6 @@
 Creating a config
 =================
-ERT runs a set of simulations with prior set of parameters sampled from distributions. The results of the simulations are then given to an optimization algorithm. The algorithm then uses a set of observations to tune the parameters. Using the updated parameters for the next run of the simulations will give results that fit better with the set of observations.
+ERT runs a set of simulations with prior set of parameters sampled from distributions. Everything involved in running a particular simulation is called a realization. A set of realizations is called an ensamble. The results of all the realizations in one ensamble are given to an optimization algorithm. The algorithm then uses a set of observations to tune the parameters. Using the updated parameters for the next ensamble run will give results that fit better with the set of observations.
 
 To understand the basics of how to configure and use ERT, we will walk through how to set up a project that uses a polynomial evaluation as the forward model.
 
@@ -15,7 +15,7 @@ Then create a file "poly.ert" inside the folder with the following content:
     .. literalinclude:: minimal/poly.ert
 
 * :ref:`JOBNAME <jobname>` Specifies the name for each simulation. The %d will be replaced with the simulation number, so that the jobs will be called poly_0, poly_1, etc.
-* :ref:`NUM_REALIZATIONS <num_realizations>` We have to specify how many simulation we want. The word realization relates to the mathematical concept of an actual observation from a distribution.
+* :ref:`NUM_REALIZATIONS <num_realizations>` We have to specify how many simulations we want to run.
 * :ref:`QUEUE_SYSTEM <QUEUE_SYSTEM>` Finally, we must specify where each simulation is to run, which is handled by the queue system. LOCAL means that everything will run on you local computer. Other possibilites are LSF and TORQUE, which are queuing systems. To use these you must have an environment available where this is supported and configured.
 
 Launch the user interface
