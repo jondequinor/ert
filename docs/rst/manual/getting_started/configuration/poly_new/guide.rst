@@ -99,7 +99,7 @@ Now we must refer to this job definition in the configuration. Add the line::
     INSTALL_JOB poly_eval POLY_EVAL 
     SIMULATION_JOB poly_eval
 
-The :ref:`INSTALL_JOB <install_job>` line tells ERT the name of the job "poly_eval", and then the file in which to find the details of how to run the job. The :ref:`SIMULATION_JOB <simulation_job>` line tells ERT to run the job as part of the simulation run.
+The :ref:`INSTALL_JOB <install_job>` line tells ERT the name of the job "poly_eval", and then the file containing details of how to run the job. The :ref:`SIMULATION_JOB <simulation_job>` line tells ERT to run the job as part of the simulation run.
 
 Now the config file should look like this:
 
