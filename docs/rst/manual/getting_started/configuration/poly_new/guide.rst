@@ -29,7 +29,7 @@ You will see a warning because we haven't configured any observarions yet. This 
 
 .. image:: minimal/ert.png
 
-On the main screen you can see some elements. The ones we care about in this Guide are:
+On the main screen you will see some elements. The ones we care about in this Guide are:
 
 * Simulation mode: lets you choose between running a single realization, or running all or specify a subset of them.
 * Runpath: shows wehere each realization of the experiment will be executed. The "%d" in this path is replaced by the number of the realization. Here we see a default used, since we have not configured the runpath yet.
