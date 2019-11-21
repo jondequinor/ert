@@ -31,7 +31,7 @@ You will see a warning because we haven't configured any observarions yet. This 
 
 On the main screen you will see some elements. The ones we care about in this Guide are:
 
-* Simulation mode: lets you choose between running a single realization, or running all or specify a subset of them.
+* Simulation mode: Lets you select which algorithm to run (since we don't have a complete setup yet, we can only choose ensemble experiment or single realization).
 * Runpath: shows wehere each realization of the experiment will be executed. The "%d" in this path is replaced by the number of the realization. Here we see a default used, since we have not configured the runpath yet.
 * The Configuration summary will show us what we have configured, and is empty at this moment.
 * The Start Simulation button will start an experiment with the current configuration and simulation mode.
