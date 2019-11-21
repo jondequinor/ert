@@ -6,7 +6,7 @@ To understand the basics of how to configure and use ERT, we will walk through h
 
 Minimal config
 --------------
-In order to test that our setup is working, we will create the minimal configuration we need in order to lauch the Graphical user interface and run an empty experiment that does nothing. First create a folder with the name "poly_example". 
+To test that our setup is working, we will create the minimal configuration we need to lauch the Graphical user interface and run an empty experiment that does nothing. First create a folder with the name "poly_example". 
 
 Create a config
 ***************
