@@ -71,7 +71,7 @@ In the minimal config, we used the default :ref:`RUNPATH <runpath>` which ran th
 
     RUNPATH poly_out/real_%d/iter_%d
 
-The second "%d" in the runpath will be replaced by the iteration of running the ensamble. In this way we can run several times, and have the results in different folders.
+The second "%d" in the runpath is replaced by the iteration number of the algorithm. This is needed since the algorithm may run several iterations during the experiment.
 
 Create script
 *************
