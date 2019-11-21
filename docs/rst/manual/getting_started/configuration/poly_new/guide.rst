@@ -25,7 +25,7 @@ Navigate to this folder on your command line and run ERT::
 
     ert gui poly.ert
 
-Wait a while and ERT will launch. You will see a warning because we haven't configured any observarions yet. This is expected, so click OK. You will see the main ERT user inteface screen.
+You will see a warning because we haven't configured any observarions yet. This is expected, so click OK. You will see the main ERT user inteface screen.
 
 .. image:: minimal/ert.png
 
