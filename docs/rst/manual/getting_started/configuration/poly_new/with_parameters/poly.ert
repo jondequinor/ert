@@ -10,5 +10,3 @@ GEN_KW COEFFS coeff.tmpl coeffs.json coeff_priors
 
 INSTALL_JOB poly_eval POLY_EVAL 
 SIMULATION_JOB poly_eval
-
-
