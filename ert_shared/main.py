@@ -122,6 +122,14 @@ def get_ert_parser(parser=None):
     test_run_parser = subparsers.add_parser(
         "test_run", help=test_run_description, description=test_run_description
     )
+    test_run_parser.add_argument(
+        "--target-case",
+        type=str,
+        required=False,
+        default="default",
+        help="This is the name of the case where the results for the "
+        "updated parameters will be stored",
+    )
 
     # ensemble_experiment_parser
     ensemble_experiment_description = (
@@ -131,6 +139,14 @@ def get_ert_parser(parser=None):
         "ensemble_experiment",
         description=ensemble_experiment_description,
         help=ensemble_experiment_description,
+    )
+    ensemble_experiment_parser.add_argument(
+        "--target-case",
+        type=str,
+        required=False,
+        default="default",
+        help="This is the name of the case where the results for the "
+        "updated parameters will be stored",
     )
     ensemble_experiment_parser.add_argument(
         "--realizations",
