@@ -157,7 +157,7 @@ def getWorkflowNames():
     """ @rtype: list[str] """
     return sorted(ERT.ert.getWorkflowList().getWorkflowNames(), key=str.lower)
 
-
+# FIXME: remove this
 def createWorkflowRunner(workflow_name):
     """ @rtype: WorkflowRunner """
     workflow_list = ERT.ert.getWorkflowList()

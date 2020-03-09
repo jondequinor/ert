@@ -4,6 +4,7 @@ from res.analysis.enums.analysis_module_options_enum import \
 from res.enkf.export import (GenDataCollector, SummaryCollector,
                              SummaryObservationCollector)
 from res.enkf.plot_data import PlotBlockDataLoader
+from res.job_queue import WorkflowRunner
 
 
 class LibresFacade(object):
@@ -81,3 +82,14 @@ class LibresFacade(object):
         if self.get_current_case_name() != case_name:
             fs = self._enkf_main.getEnkfFsManager().getFileSystem(case_name)
             self._enkf_main.getEnkfFsManager().switchFileSystem(fs)
+
+    def get_workflow_list(self):
+        return self._enkf_main.getWorkflowList()
+
+    def create_workflow_runner(self, workflow_name):
+        """ @rtype: WorkflowRunner """
+        workflow_list = self.get_workflow_list()
+
+        workflow = workflow_list[workflow_name]
+        context = workflow_list.getContext()
+        return WorkflowRunner(workflow, self._enkf_main, context)
