@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from ert_shared.status.entity.state import COLOR_FAILED, COLOR_FINISHED
+from ert_shared.status.utils import format_running_time
 
 import sys
 import threading
@@ -8,9 +10,8 @@ import time
 from colors import color as ansi_color
 from console_progressbar import ProgressBar
 
-from ert_shared.tracker.events import EndEvent, GeneralEvent
-from ert_shared.tracker.state import SimulationStateStatus
-from ert_shared.tracker.utils import format_running_time
+# from ert_shared.tracker.events import EndEvent, GeneralEvent
+# from ert_shared.tracker.state import SimulationStateStatus
 
 
 def _ansi_color(*args, **kwargs):
@@ -50,12 +51,13 @@ class Monitor(object):
         return args[0]
 
     def monitor(self, tracker):
-        for event in tracker.track():
-            if isinstance(event, GeneralEvent):
-                self._print_progress(event)
-            if isinstance(event, EndEvent):
-                self._print_result(event.failed, event.failed_msg)
-                return
+        # for event in tracker.track():
+        #     if isinstance(event, GeneralEvent):
+        #         self._print_progress(event)
+        #     if isinstance(event, EndEvent):
+        #         self._print_result(event.failed, event.failed_msg)
+        #         return
+        pass
 
     def _get_legends(self, sim_states):
         legends = {}
@@ -70,11 +72,11 @@ class Monitor(object):
         if failed:
             msg = "Simulations failed with the following error: {}".format(
                 failed_message)
-            print(self._colorize(msg, fg=SimulationStateStatus.COLOR_FAILED),
+            print(self._colorize(msg, fg=COLOR_FAILED),
                   file=self._out)
         else:
             print(self._colorize("Simulations completed.",
-                                 fg=SimulationStateStatus.COLOR_FINISHED),
+                                 fg=COLOR_FINISHED),
                   file=self._out)
 
     def _print_progress(self, event):

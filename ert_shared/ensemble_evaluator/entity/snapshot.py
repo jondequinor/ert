@@ -41,7 +41,7 @@ class PartialSnapshot:
     def update_status(self, status):
         self._data["status"] = status
 
-    def update_real(self, real_id, active=None, start_time=None, end_time=None):
+    def update_real(self, real_id, active=None, start_time=None, end_time=None, status=None):
         if real_id not in self._data["reals"]:
             self._data["reals"][real_id] = {"stages": {}}
         real = self._data["reals"][real_id]
@@ -52,6 +52,8 @@ class PartialSnapshot:
             real["start_time"] = start_time
         if end_time is not None:
             real["end_time"] = end_time
+        if status is not None:
+            real["status"] = status
         return real
 
     def update_stage(
@@ -61,7 +63,6 @@ class PartialSnapshot:
         status=None,
         start_time=None,
         end_time=None,
-        queue_state=None,
     ):
         real = self.update_real(real_id)
         if stage_id not in real["stages"]:
@@ -74,8 +75,6 @@ class PartialSnapshot:
             stage["start_time"] = start_time
         if end_time is not None:
             stage["end_time"] = end_time
-        if queue_state is not None:
-            stage["queue_state"] = queue_state
         return stage
 
     def update_step(
@@ -128,6 +127,12 @@ class PartialSnapshot:
         return self._data
 
     @classmethod
+    def from_dict(cls, dict_):
+        p = cls()
+        p._data = dict_
+        return p
+
+    @classmethod
     def from_cloudevent(cls, event):
         snapshot = cls()
         e_type = event["type"]
@@ -135,16 +140,16 @@ class PartialSnapshot:
         timestamp = event["time"]
 
         if e_type in ids.EVGROUP_FM_STAGE:
-            queue_state = event.data.get("queue_event_type")
+            real_id = get_real_id(e_source)
+            snapshot.update_real(real_id, status=_FM_TYPE_EVENT_TO_STATUS[e_type])
             snapshot.update_stage(
-                get_real_id(e_source),
+                real_id,
                 get_stage_id(e_source),
                 status=_FM_TYPE_EVENT_TO_STATUS[e_type],
                 start_time=timestamp if e_type == ids.EVTYPE_FM_STAGE_RUNNING else None,
                 end_time=timestamp
                 if e_type in {ids.EVTYPE_FM_STAGE_FAILURE, ids.EVTYPE_FM_STAGE_SUCCESS}
                 else None,
-                queue_state=queue_state,
             )
         elif e_type in ids.EVGROUP_FM_STEP:
             snapshot.update_step(
@@ -261,13 +266,14 @@ class _Stage(BaseModel):
 
 
 class _Realization(BaseModel):
+    status: str
     active: bool
     start_time: Optional[str]
     end_time: Optional[str]
     stages: Dict[str, _Stage] = {}
 
 
-class _SnapshotDict(BaseModel):
+class SnapshotDict(BaseModel):
     status: str
     reals: Dict[str, _Realization] = {}
     forward_model: _ForwardModel
@@ -280,11 +286,12 @@ class SnapshotBuilder(BaseModel):
     metadata: Dict[str, Any] = {}
 
     def build(self, real_ids, status, start_time=None, end_time=None):
-        top = _SnapshotDict(
+        top = SnapshotDict(
             status=status, forward_model=self.forward_model, metadata=self.metadata
         )
         for r_id in real_ids:
             top.reals[r_id] = _Realization(
+                status="Unknown",
                 active=True,
                 stages=self.stages,
                 start_time=start_time,

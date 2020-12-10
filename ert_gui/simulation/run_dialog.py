@@ -1,18 +1,25 @@
+from ert_gui.model.real_list import RealListModel
+from ert_gui.model.job_list import JobListProxyModel
+from ert_gui.model.node import NodeType
+from ert_gui.model.snapshot import SnapshotModel
+from ert_shared.ensemble_evaluator.entity.snapshot import PartialSnapshot, Snapshot
+from ert_gui.simulation.tracker_worker import TrackerWorker
+from ert_shared.status.entity.state import REAL_STATE_TO_COLOR
 import time
 from threading import Thread
 
-from qtpy.QtCore import Qt, QTimer, QSize, Signal, Slot
+from qtpy.QtCore import Qt, QTimer, QSize, Signal, Slot, QThread, QModelIndex
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget, QTreeView, QTableView, QListView
 
 from ecl.util.util import BoolVector
 from ert_gui.ertwidgets import Legend, resourceMovie
 from ert_gui.simulation import DetailedProgressWidget, Progress, SimpleProgress
 from ert_gui.tools.plot.plot_tool import PlotTool
 from ert_shared.models import BaseRunModel
-from ert_shared.tracker.events import DetailedEvent, EndEvent, GeneralEvent
-from ert_shared.tracker.factory import create_tracker
-from ert_shared.tracker.utils import format_running_time
+from ert_shared.status.entity.event import FullSnapshotEvent, EndEvent, SnapshotUpdateEvent
+from ert_shared.status.tracker.factory import create_tracker
+from ert_shared.status.utils import format_running_time
 from res.job_queue import JobStatusType
 
 
@@ -26,7 +33,7 @@ class RunDialog(QDialog):
         self.setModal(True)
         self.setWindowModality(Qt.WindowModal)
         self.setWindowTitle("Simulations - {}".format(config_file))
-
+        self._snapshot_model = SnapshotModel(self)
         assert isinstance(run_model, BaseRunModel)
         self._run_model = run_model
 
@@ -37,18 +44,13 @@ class RunDialog(QDialog):
         self._simulations_argments = simulation_arguments
         self._storage_client = storage_client
 
-        self.simulations_tracker = create_tracker(
-            run_model, qtimer_cls=QTimer,
-            event_handler=self._on_tracker_event,
-            num_realizations=self._simulations_argments["active_realizations"].count())
-
         self._ticker = QTimer(self)
         self._ticker.timeout.connect(self._on_ticker)
 
-        states = self.simulations_tracker.get_states()
-        self.state_colors = {state.name: state.color for state in states}
-        self.state_colors['Success'] = self.state_colors["Finished"]
-        self.state_colors['Failure'] = self.state_colors["Failed"]
+        # states = self.simulations_tracker.get_states()
+        # self.state_colors = {state.name: state.color for state in states}
+        # self.state_colors['Success'] = self.state_colors["Finished"]
+        # self.state_colors['Failure'] = self.state_colors["Failed"]
 
         self.total_progress = SimpleProgress()
 
@@ -61,15 +63,12 @@ class RunDialog(QDialog):
         status_widget_container.setLayout(status_layout)
 
         self.progress = Progress()
-        self.progress.setIndeterminateColor(self.total_progress.color)
-        for state in states:
-            self.progress.addState(state.state, QColor(*state.color), 100.0 * state.count / state.total_count)
 
         legend_layout = QHBoxLayout()
         self.legends = {}
-        for state in states:
-            self.legends[state] = Legend("%s (%d/%d)", QColor(*state.color))
-            self.legends[state].updateLegend(state.name, 0, 0)
+        for state, color in REAL_STATE_TO_COLOR.items():
+            self.legends[state] = Legend("%s (%d/%d)", QColor(*color))
+            self.legends[state].updateLegend(state, 0, 0)
             legend_layout.addWidget(self.legends[state])
 
         legend_widget_container = QWidget()
@@ -114,7 +113,7 @@ class RunDialog(QDialog):
         button_widget_container = QWidget()
         button_widget_container.setLayout(button_layout)
 
-        self.detailed_progress = DetailedProgressWidget(self, self.state_colors)
+        self.detailed_progress = DetailedProgressWidget(self)
         self.detailed_progress.setVisible(False)
         self.dummy_widget_container = QWidget() #Used to keep the other widgets from stretching
 
@@ -126,6 +125,30 @@ class RunDialog(QDialog):
         layout.addWidget(self.detailed_progress)
         layout.addWidget(self.dummy_widget_container)
         layout.addWidget(button_widget_container)
+
+        snapshot_tree = QTreeView(self)
+        snapshot_tree.setModel(self._snapshot_model)
+        snapshot_tree.clicked.connect(self._select_iter)
+
+        layout.addWidget(snapshot_tree)
+
+        real_model = RealListModel(self, 0)
+        real_model.setSourceModel(self._snapshot_model)
+
+        self._real_list = QListView(self)
+        self._real_list.setViewMode(QListView.IconMode)
+        self._real_list.setGridSize(QSize(120, 20))
+        self._real_list.setModel(real_model)
+        self._real_list.setVisible(False)
+        self._real_list.clicked.connect(self._select_real)
+        layout.addWidget(self._real_list)
+
+        job_model = JobListProxyModel(self, 0, 0, 0, 0)
+        job_model.setSourceModel(self._snapshot_model)
+
+        self._job_list = QTableView(self)
+        self._job_list.setModel(job_model)
+        layout.addWidget(self._job_list)
 
         layout.setStretch(0, 0)
         layout.setStretch(1, 0)
@@ -143,11 +166,38 @@ class RunDialog(QDialog):
         self.show_details_button.clicked.connect(self.toggle_detailed_progress)
         self.simulation_done.connect(self._on_simulation_done)
 
+    @Slot(QModelIndex)
+    def _select_iter(self, index):
+        node = index.internalPointer()
+        if node is None or node.type != NodeType.ITER:
+            return
+        iter_ = node.row()
+        print("select iter: ", iter_)
+
+        self._real_list.model().setIter(iter_)
+        self._real_list.setVisible(True)
+
+    @Slot(QModelIndex)
+    def _select_real(self, index):
+        node = index.internalPointer()
+        if node is None or node.type != NodeType.REAL:
+            return
+        step = 0
+        stage = 0
+        real = node.row()
+        iter_ = node.parent.row()
+        print("select real", step, stage, real, iter_)
+
+        # create a proxy model
+        # TODO: change values on proxymodel such that it does not need creation
+        proxy = JobListProxyModel(self, iter_, real, stage, step)
+        proxy.setSourceModel(self._snapshot_model)
+        self._job_list.setModel(proxy)
+
     def reject(self):
         return
 
     def closeEvent(self, QCloseEvent):
-        self.simulations_tracker.stop()
         if self._run_model.isFinished():
             self.simulation_done.emit(self._run_model.hasRunFailed(),
                                       self._run_model.getFailMessage())
@@ -158,7 +208,6 @@ class RunDialog(QDialog):
 
     def startSimulation(self):
         self._run_model.reset()
-        self.simulations_tracker.reset()
 
         def run():
             self._run_model.startSimulations( self._simulations_argments )
@@ -169,7 +218,21 @@ class RunDialog(QDialog):
         simulation_thread.start()
 
         self._ticker.start(1000)
-        self.simulations_tracker.track()
+
+        tracker = create_tracker(
+            self._run_model,
+            num_realizations=self._simulations_argments["active_realizations"].count()
+        )
+        worker = TrackerWorker(tracker)
+        worker_thread = QThread()
+        worker.done.connect(worker_thread.quit)
+        worker.consumed_event.connect(self._on_tracker_event)
+        worker.moveToThread(worker_thread)
+        self.simulation_done.connect(worker.stop)
+        self._worker = worker
+        self._worker_thread = worker_thread
+        worker_thread.started.connect(worker.consume_and_emit)
+        self._worker_thread.start()
 
     def killJobs(self):
 
@@ -179,13 +242,14 @@ class RunDialog(QDialog):
         kill_job = QMessageBox.question(self, "Kill simulations?",msg, QMessageBox.Yes | QMessageBox.No )
 
         if kill_job == QMessageBox.Yes:
-            if self.simulations_tracker.request_termination():
-                self.reject()
+            # Normally this slot would be invoked by the signal/slot system,
+            # but the worker is busy tracking the evaluation.
+            self._worker.request_termination()
+            self.reject()
         return kill_job
 
     @Slot(bool, str)
     def _on_simulation_done(self, failed, failed_msg):
-        self.simulations_tracker.stop()
         self.processing_animation.hide()
         self.kill_button.setHidden(True)
         self.done_button.setHidden(False)
@@ -201,34 +265,56 @@ class RunDialog(QDialog):
     def _on_ticker(self):
         runtime = self._run_model.get_runtime()
         self.running_time.setText(format_running_time(runtime))
+        if runtime % 5 == 0:
+            self.total_progress.update()
+            self.progress.update()
+            # self.legends.handle(event)
+        if runtime % 10 == 0:
+            self.detailed_progress.update()
 
     @Slot(object)
     def _on_tracker_event(self, event):
-        if isinstance(event, GeneralEvent):
-            self.total_progress.setProgress(event.progress)
-            self.progress.setIndeterminate(event.indeterminate)
-
-            if event.indeterminate:
-                for state in event.sim_states:
-                    self.legends[state].updateLegend(state.name, 0, 0)
-            else:
-                for state in event.sim_states:
-                    try:
-                        self.progress.updateState(
-                            state.state, 100.0 * state.count / state.total_count)
-                    except ZeroDivisionError:
-                        # total_count not set by some slow tracker (EE)
-                        pass
-                    self.legends[state].updateLegend(
-                        state.name, state.count, state.total_count)
-
-        if isinstance(event, DetailedEvent):
-            if not self.progress.get_indeterminate():
-                self.detailed_progress.set_progress(event.details,
-                                                    event.iteration)
+        print("got tracker event", type(event))
 
         if isinstance(event, EndEvent):
             self.simulation_done.emit(event.failed, event.failed_msg)
+            self._worker.stop()
+            self._ticker.stop()
+        elif isinstance(event, FullSnapshotEvent):
+            if event.snapshot is not None:
+                self._snapshot_model._add_snapshot(event.snapshot, event.iteration)
+        elif isinstance(event, SnapshotUpdateEvent):
+            if event.partial_snapshot is not None:
+                self._snapshot_model._add_partial_snapshot(event.partial_snapshot, event.iteration)
+            # self.total_progress.handle(event)
+            # self.progress.handle(event)
+            # self.detailed_progress.handle(event)
+            # self.legends.handle(event)
+        # if isinstance(event, GeneralEvent):
+        #     self.total_progress.setProgress(event.progress)
+        #     self.progress.setIndeterminate(event.indeterminate)
+
+        #     if event.indeterminate:
+        #         for state in event.sim_states:
+        #             self.legends[state].updateLegend(state.name, 0, 0)
+        #     else:
+        #         for state in event.sim_states:
+        #             try:
+        #                 self.progress.updateState(
+        #                     state.state, 100.0 * state.count / state.total_count)
+        #             except ZeroDivisionError:
+        #                 # total_count not set by some slow tracker (EE)
+        #                 pass
+        #             self.legends[state].updateLegend(
+        #                 state.name, state.count, state.total_count)
+
+        # if isinstance(event, DetailedEvent):
+        #     if not self.progress.get_indeterminate():
+        #         self.detailed_progress.set_progress(event.details,
+        #                                             event.iteration)
+
+        # if isinstance(event, EndEvent):
+        #     self.simulation_done.emit(event.failed, event.failed_msg)
 
     def has_failed_realizations(self):
         completed = self._run_model.completed_realizations_mask
